@@ -14,8 +14,14 @@ coeff_2 = 1/5;  % Rapporto tra soglia_bassa e soglia_alta
 
 %%
 
-I = imread('Fig_01.jpg');
-% A questo punto I può essere:
+I = imread(fullfile('Immagini_Testing', 'Fig_03.jpg'));
+
+% In ambiente MATLAB andava bene anche solo:
+    % I = imread('Fig_01.jpg');
+% L'instruzione sopra con comando "fullfile" serve unicamente in ambiente
+% GNU Octave per la piena compatibilità con "addpath('Immagini_Testing')"
+
+% In questo punto I può essere:
 % 1) o una matrice MxN di elementi unsigned int ad 8 bit dove un elemento 
 %    di I, diciamo I(i,j) è un intero da 0 a 255. E' il caso delle immagini
 %    in scala di grigi.
@@ -74,9 +80,9 @@ I_bordi = gestisci_bordi_deboli(I_bordi, vett_bordi_forti);
 
 %%
 % stampo l'immagine originaria:
-figure(1), image(I_orig), colormap gray(256), axis image; 
+figure(1), image(I_orig), colormap(gray(256)), axis image; 
 % Il comando axis fa si che l'immagine mantenga le sue proporzioni originali
-% Il comando colormap gray(256) invece:
+% Il comando colormap(gray(256)) invece:
 % - se l'immagine è in RGB (cioè a colori), e quindi di dimensione MxNx3,
 %   allora il comando viene ignorato
 % - se invece I è invece una matrice MxN, dice di stampare in scala di 
@@ -86,5 +92,5 @@ figure(1), image(I_orig), colormap gray(256), axis image;
 
 %%
 % stampo i bordi:
-figure(2), image(I_bordi), colormap gray(256), axis image; 
+figure(2), image(I_bordi), colormap(gray(256)), axis image; 
 
