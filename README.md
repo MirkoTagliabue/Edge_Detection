@@ -1,12 +1,12 @@
 # L'algoritmo di Canny
 Lo scopo di questo progetto è individuare i bordi presenti in un'immagine, ovverosia i contorni delle figure che sono rappresentate nell'immagine, mediante
 implementazione dell'algoritmo di Canny.
-L'idea chiave dell'algoritmo è quella di andare a confrontare la velocità di variazione del colore in pixels contigui, se c'è una variazione di colore molto
+L'idea chiave dell'algoritmo è quella di andare a confrontare la velocità di variazione del colore in pixel contigui, se c'è una variazione di colore molto
 intensa in 3 pixel contigui, l'algoritmo di Canny catalogherà il pixel centrale come di bordo.  
 L'algoritmo prende il nome da John Canny, autore dell'articolo *A Computational Approach to Edge Detection* pubblicato nel 1986. 
 Nel presente progetto ne viene realizzata una versione con filtro gaussiano, operatori di Sobel, soppressione dei non massimi e doppia sogliatura con isteresi.  
 I codici sono stati implementati in linguaggio MATLAB, tuttavia, essendo tutti gli algoritmi stati scritti from scratch (da zero) utilizzando unicamente la 
-libreria standard di MATLAB, i codici risultano pienamente compatibili sia con le licenze base di MATLAB (senza la necessità di specifici toolbox a pagamento), 
+libreria standard di MATLAB, i codici risultano compatibili sia con le licenze base di MATLAB (senza la necessità di specifici toolbox a pagamento), 
 sia con il software open-source GNU Octave.  
 
 <p align="center">
@@ -22,7 +22,7 @@ In seguito indicheremo con $R$ il numero delle righe e con $C$ il numero delle c
 Nelle immagini in scala di grigi ad 8 bit, ciascun pixel sarà un valore compreso tra 0 e 255 (ovverosia $2^8-1$), dove 0 indica il colore nero, 255 indica 
 un bianco acceso, e tutti gli interi intermedi individuano una tonalità di grigio, più scuro quando il valore è vicino allo zero e più chiaro 
 quando l'intero è vicino a 255.
-Per le immagini a colori invece, ciascun pixel della matrice individua una terna di elementi, corrispondenti alla tonalità dei colori Red, Green ed Blue, 
+Per le immagini a colori invece, ciascun pixel della matrice individua una terna di elementi, corrispondenti alla tonalità dei colori Red, Green e Blue, 
 motivo per cui queste immagini vengono dette in scala di colori RGB, dal momento che ciascun pixel avrà un colore dato dalla combinazione lineare
 di questi tre colori. Segue pertanto che un'immagine in scala di grigi è individuata da una matrice di dimensione $R \times C$, mentre un'immagine a colori 
 sarà un array (o tensore) di dimensione $R \times C \times 3$.  
@@ -50,10 +50,13 @@ L'algoritmo di Canny lavora con un'immagine in scala di grigi, pertanto, se l'im
 Preso atto di ciò, l'idea chiave è individuare i punti nei quali l'intensità dell'immagine cambia più rapidamente, e per farlo si utilizzano tecniche alle
 derivate discrete ed alle differenze finite, misurando quanto rapidamente cambia l'intensità di pixel vicini.  
 Tuttavia, prima di poter procedere effettivamente al calcolo dei gradienti, bisogna dapprima attenuare il rumore visivo presente nella figura: 
-l'immagine così com'è può produrre variazioni locali molto forti, di conseguenza, bisogna prima applicare un filtro gaussiano che medi l'intentità di un pixel con quella dei pixel ad esso vicini.
+l'immagine così com'è può produrre variazioni locali molto forti, di conseguenza, bisogna prima applicare un filtro gaussiano che medi l'intensità di un pixel con quella dei pixel ad esso vicini.
 
-Si calcolano quindi la norma e la direzione del gradiente in ogni pixel, si selezionano i massimi locali lungo tale direzione e si classificano i pixel rimasti mediante due soglie e li si classificano in *bordi deboli* e *bordi forti*. 
-Infine, si utilizza l'analisi delle componenti connesse tra i pixel per decidere quali bordi deboli conservare e quali scartare.
+Si calcolano quindi la norma e la direzione del gradiente in ogni pixel, si selezionano i massimi locali lungo tale direzione, questi pixel saranno
+i candidati massimi e costituiranno un insieme da cui poi verrà estratto il sottoinsisme dei pixel effettivamente di bordo. 
+Determinato l'insieme dei candidati di bordo, si classificano poi i pixel selezionati mediante due soglie suddividendoli in *bordi deboli* e *bordi forti*, 
+oppure scartandoli e non considerandoli più come di bordo. 
+Infine, si utilizza l'analisi delle componenti connesse tra i pixel per decidere quali bordi deboli conservare e quali scremare ulteriormente.
 
 Lo script principale [Canny.m](./Canny.m) richiama le sette funzioni secondarie nel seguente ordine:
 
@@ -107,9 +110,9 @@ G_{\sigma}(x,y) = \frac{1}{2\pi\sigma^2}
 \exp\left(-\frac{x^2+y^2}{2\sigma^2}\right)
 $$
 
-Il filtro gaussiano viene applicato mediante convoluzione dell'immagine in bianco e nero con una maschera $5 \times 5$ avente come valori
-quelli originati dalla funzione gaussiana.  
-Infine, i nuovi valori vengono normalizzati, e di conseguenza il filtro conserva l'intensità di un'immagine costante.
+Il filtro gaussiano viene applicato mediante convoluzione dell’immagine in scala di grigi con una maschera $5 \times 5$. I valori della maschera si 
+ottengono campionando la funzione gaussiana e normalizzando i pesi affinché la loro somma sia uguale a 1. In questo modo il filtro conserva 
+l’intensità di un’immagine costante.
 
 Il parametro $\sigma$ regola la distribuzione dei pesi. Valori piccoli concentrano maggiormente il peso vicino al pixel centrale; aumentando $\sigma$, i 
 pixel circostanti acquistano maggiore importanza e l'effetto di sfocatura diventa più marcato, con una possibile perdita dei dettagli più fini.  
@@ -119,10 +122,19 @@ Come dettaglio implementativo si segnala che la matrice originale viene espansa 
 
 [INSERIRE IMMAGINI CON BLUR GAUSSIANO]
 
+[INSERIRE IMMAGINI IN CUI CONFRONTO OUTPUT DUOMO CON DUE \SIGMA DIVERSI]
+
 
 ## Calcolo della norma e della direzione del gradiente
 
 La funzione [calcola_grad_e_angolo](./Funzioni_Secondarie/calcola_grad_e_angolo.m) utilizza l'immagine filtrata per stimare, in ogni pixel, il gradiente
-dell'intensità dell'immagine e l'angolo di tale vettore gradiente. L'obiettivo è stimare intensità e direzione della variazione del colore in scala di grigi.
+dell'intensità dell'immagine e l'angolo di tale vettore gradiente. L'obiettivo è stimare intensità e direzione della variazione del colore in scala di grigi.  
+Per ogni pixel bisognerà quindi stim
+
+
+
+
+
+
 
 
