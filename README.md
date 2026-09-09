@@ -52,8 +52,8 @@ derivate discrete ed alle differenze finite, misurando quanto rapidamente cambia
 Tuttavia, prima di poter procedere effettivamente al calcolo dei gradienti, bisogna dapprima attenuare il rumore visivo presente nella figura: 
 l'immagine così com'è può produrre variazioni locali molto forti, di conseguenza, bisogna prima applicare un filtro gaussiano che medi l'intensità di un pixel con quella dei pixel ad esso vicini.
 
-Si calcolano quindi la norma e la direzione del gradiente in ogni pixel, si selezionano i massimi locali lungo tale direzione, questi pixel saranno
-i candidati massimi e costituiranno un insieme da cui poi verrà estratto il sottoinsisme dei pixel effettivamente di bordo. 
+Si calcolano quindi la norma e la direzione del gradiente in ogni pixel, si selezionano i massimi locali lungo tale direzione; questi pixel saranno
+i candidati punti di bordo e costituiranno un insieme da cui poi verrà estratto il sottoinsieme dei pixel effettivamente di bordo. 
 Determinato l'insieme dei candidati di bordo, si classificano poi i pixel selezionati mediante due soglie suddividendoli in *bordi deboli* e *bordi forti*, 
 oppure scartandoli e non considerandoli più come di bordo. 
 Infine, si utilizza l'analisi delle componenti connesse tra i pixel per decidere quali bordi deboli conservare e quali scremare ulteriormente.
@@ -62,13 +62,13 @@ Lo script principale [Canny.m](./Canny.m) richiama le sette funzioni secondarie 
 
 | Ordine | Procedura secondaria | Ruolo |
 | --- | --- | --- |
-| 1 | `converti_in_scala_di_grigi` | Convertire, se necessario, l'immagine in scala di grigi |
-| 2 | `smoothing_gaussiano` | Attenuare il rumore mediante un filtro gaussiano. |
-| 3 | `calcola_grad_e_angolo` | Stimare la norma del gradiente e quantizzarne la direzione. |
-| 4 | `individua_candidati_massimi` | Selezionare i pixel che abbiano gradiente in norma maggiore dei pixel ad esso adiacenti lungo la direzione data dall'angolo. |
-| 5 | `calcola_soglie` | Determinare due variabili soglia: soglia alta e soglia bassa. |
-| 6 | `individua_bordi_deboli_e_forti` | Distinguere bordi forti, bordi deboli e pixel da scartare. |
-| 7 | `gestisci_bordi_deboli` | Promuovere i bordi deboli connessi ai bordi forti. |
+| 1 | [`converti_in_scala_di_grigi`](./Funzioni_Secondarie/converti_in_scala_di_grigi.m) | Convertire, se necessario, l'immagine in scala di grigi |
+| 2 | [`smoothing_gaussiano`](./Funzioni_Secondarie/smoothing_gaussiano.m) | Attenuare il rumore mediante un filtro gaussiano. |
+| 3 | [`calcola_grad_e_angolo`](./Funzioni_Secondarie/calcola_grad_e_angolo.m) | Stimare la norma del gradiente e quantizzarne la direzione. |
+| 4 | [`individua_candidati_massimi`](./Funzioni_Secondarie/individua_candidati_massimi.m) | Selezionare i pixel che abbiano gradiente in norma maggiore dei pixel ad esso adiacenti lungo la direzione data dall'angolo. |
+| 5 | [`calcola_soglie`](./Funzioni_Secondarie/calcola_soglie.m) | Determinare due variabili soglia: soglia alta e soglia bassa. |
+| 6 | [`individua_bordi_deboli_e_forti`](./Funzioni_Secondarie/individua_bordi_deboli_e_forti.m) | Distinguere bordi forti, bordi deboli e pixel da scartare. |
+| 7 | [`gestisci_bordi_deboli`](./Funzioni_Secondarie/gestisci_bordi_deboli.m) | Promuovere i bordi deboli connessi ai bordi forti. |
 
 Al termine della procedura, la matrice `I_bordi` sarà a valori nell'insieme binario $\\{0,255\\}$.  
 Le procedure secondarie nella tabella sopra verranno approfondite nelle sezioni sottostanti.
@@ -106,13 +106,12 @@ pesi sono dati dalla funzione densità della distribuzione gaussiana.
 Il modello di riferimento è la funzione gaussiana bidimensionale:
 
 $$
-G_{\sigma}(x,y) = \frac{1}{2\pi\sigma^2}
+f_{\sigma}(x,y) = \frac{1}{2\pi\sigma^2}
 \exp\left(-\frac{x^2+y^2}{2\sigma^2}\right)
 $$
 
 Il filtro gaussiano viene applicato mediante convoluzione dell’immagine in scala di grigi con una maschera $5 \times 5$. I valori della maschera si 
-ottengono campionando la funzione gaussiana e normalizzando i pesi affinché la loro somma sia uguale a 1. In questo modo il filtro conserva 
-l’intensità di un’immagine costante.
+ottengono campionando la funzione gaussiana e normalizzando i pesi affinché la loro somma sia uguale a 1.
 
 Il parametro $\sigma$ regola la distribuzione dei pesi. Valori piccoli concentrano maggiormente il peso vicino al pixel centrale; aumentando $\sigma$, i 
 pixel circostanti acquistano maggiore importanza e l'effetto di sfocatura diventa più marcato, con una possibile perdita dei dettagli più fini.  
@@ -129,12 +128,88 @@ Come dettaglio implementativo si segnala che la matrice originale viene espansa 
 
 La funzione [calcola_grad_e_angolo](./Funzioni_Secondarie/calcola_grad_e_angolo.m) utilizza l'immagine filtrata per stimare, in ogni pixel, il gradiente
 dell'intensità dell'immagine e l'angolo di tale vettore gradiente. L'obiettivo è stimare intensità e direzione della variazione del colore in scala di grigi.  
-Per ogni pixel bisognerà quindi stim
+Detta $I = I(i,j)$ la matrice descrivente l'immagine (con blur gaussiano), per ogni pixel bisognerà quindi stimare:
+
+$$
+\nabla I(i,j) = \begin{pmatrix}
+\frac{\partial I}{\partial x}(i,j), \hspace{0.1cm}
+\frac{\partial I}{\partial y}(i,j)
+\end{pmatrix}.
+$$
+
+e per calcolare le derivate si possono usare differenze finite per la derivata prima al secondo ordine di accuratezza:
+
+$$
+\frac{\partial I}{\partial x}(i,j) \approx \frac{ I(i,j+1) - I(i,j-1) }{2}
+$$
+
+in realtà, si coinvolgono nel calcolo gli altri pixel dell'intorno $3 \times 3$, al fine di rendere il metodo più robusto, e così, 
+per stimare $\frac{\partial I}{\partial x}(i,j)$ si usano anche le righe sopra e sotto, andando a computare poi una media pesata dove la riga del 
+pixel in questione pesa $2$ e le righe sovrastanti e sottostanti pesano $1$, si ottiene dunque che:
+
+$$
+4 \cdot \frac{\partial I}{\partial x}(i,j) \approx \frac{\partial I}{\partial x}(i-1,j) + 2 \cdot \frac{\partial I}{\partial x}(i,j) + 
+  \frac{\partial I}{\partial x}(i+1,j)
+$$
+
+e di conseguenza, a meno di un fattore moltiplicativo, per stimare la derivata in $\partial x$ di tutti i pixel di $I$ è sufficiente eseguire una convoluzione 
+della matrice $I$ con una maschera $K_x$ detta filtro di Sobel, dove la maschera in questione vale:
+
+$$
+K_x =
+\begin{pmatrix}
+-1 & 0 & 1 \\
+-2 & 0 & 2 \\
+-1 & 0 & 1
+\end{pmatrix}
+$$
+
+Discorso analogo vale per la stima di $\frac{\partial I}{\partial y}$ dove si userà un filtro di Sobel con maschera:
+
+$$
+K_y =
+\begin{pmatrix}
+1 & 2 & 1 \\
+0 & 0 & 0 \\
+-1 & -2 & -1
+\end{pmatrix}
+$$
+
+Note le componenti $x$ ed $y$ del vettore gradiente, è possibile stimare la norma del gradiente con il teorema di Pitagora 
+ed è possibile stimare l'angolo $\theta$ del gradiente con la funzione arcotangente, più precisamente tramite la funzione `atan2`, che a differenza 
+dell'arcotangente classico ha immagine in $[- \pi, \pi]$, anziché in $\left(-\frac{\pi}{2},\frac{\pi}{2} \right)$, ed implementa nativamente la divisione per 
+zero, oltre che la gestione dell'edge-case dell'angolo del vettore nullo.  
+Noto $\theta \in [- \pi, \pi]$ lo si approssima ad uno dei $4$ valori: $\\{0^\circ, 45^\circ, 90^\circ, 135^\circ \\}$, in base 
+a questo valore si ragionerà in seguito in orizzontale, in verticale, oppure su una delle due diagonali nell'intorno $3 \times 3$ del pixel in esame.
+
+L'output di questa funzione sono le due matrici `Norm_Grad` e `angolo`, entrambe della stessa dimensione $R \times C$ della matrice $I$, contenenti la
+prima la norma dei gradienti di ogni pixel e la seconda l'angolo (già quantizzato) del gradiente di ogni pixel. 
 
 
+## Individuazione dei candidati mediante soppressione dei non massimi
+
+La funzione [individua_candidati_massimi](./Funzioni_Secondarie/individua_candidati_massimi.m) seleziona i pixel che costituiscono massimi locali della norma 
+del gradiente lungo la direzione del gradiente stesso. Questa operazione viene detta *non-maximum suppression*, ovverosia soppressione dei non massimi. I 
+pixel selezionati saranno i candidati punti di bordo, da cui poi si estrarrà (nelle procedure successive) il sottoinsieme degli effettivi pixel di bordo.
+Per ogni pixel $(i,j)$, si accederà innanzi tutto alla direzione contenuta in $\theta(i,j)$, e nota tale direzione si confronterà, nell'intorno $3 \times 3$ 
+la norma del gradiente del pixel in esame con quella dei suoi pixel adiacenti lungo la direzione indicata da $\theta(i,j)$, in particolare:  
+- pixel sinistro e destro se $\theta(i,j) = 0^ \circ$,
+- pixel sopra e sotto se $\theta(i,j) = 90^ \circ$,  
+- pixel sulla diagonale da in basso a sinistra ad in alto a destra (antidiagonale) se $\theta(i,j) = 45^\circ$,
+- pixel sulla diagonale da in basso a destra ad in alto a sinistra (diagonale principale) se $\theta(i,j) = 135^\circ$.  
+
+Se il pixel ha gradiente in norma strettamente maggiore di uno dei suoi vicini e maggiore o uguale alla norma dell'altro, allora lo si considera un candidato 
+punto di bordo. Si evita invece di considerare bordo il caso in cui un pixel abbia gradiente in norma strettamente uguale ad entrambi i suoi pixel adiacenti.  
+
+L'output di questa funzione sarà la matrice `I_bordi` a valori nell'insieme binario $\\{0,255 \\}$ dove un pixel viene messo a $0$ se non è un candidato 
+bordo e viene invece messo a $255$ se è un candidato bordo. 
 
 
+## Calcolo della soglia alta e della soglia bassa
 
-
+La funzione [calcola_soglie](./Funzioni_Secondarie/calcola_soglie.m) determina i due valori che saranno utilizzati per classificare i candidati.
+Una sola soglia imporrebbe una scelta piuttosto rigida: una soglia alta eliminerebbe anche i tratti meno evidenti dei contorni, mentre una soglia bassa 
+conserverebbe molte variazioni poco significative. La doppia soglia permette invece di separare i pixel considerati abbastanza marcati da essere conservati 
+direttamente da quelli per i quali sarà necessario valutare anche la connessione con gli altri bordi.
 
 
