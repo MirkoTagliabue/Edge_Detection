@@ -115,7 +115,9 @@ ottengono campionando la funzione gaussiana e normalizzando i pesi affinché la 
 
 Il parametro $\sigma$ regola la distribuzione dei pesi. Valori piccoli concentrano maggiormente il peso vicino al pixel centrale; aumentando $\sigma$, i 
 pixel circostanti acquistano maggiore importanza e l'effetto di sfocatura diventa più marcato, con una possibile perdita dei dettagli più fini.  
-La variabile `sigma` è uno dei tre parametri modificabili che determinano la distribuzione ed il numero di pixel classificati "di bordo" nella matrice finale. 
+La variabile `sigma` è uno dei tre parametri modificabili che determinano la distribuzione ed il numero di pixel classificati "di bordo" nella matrice finale.  
+Valori tipici di `sigma` comunque vanno da 0.1 ad 2, anche se comunque dipende fortemente dalla scena rappresentata nell'immagine e da quanti dettagli nei 
+bordi si desidera ottenere.
 
 Come dettaglio implementativo si segnala che la matrice originale viene espansa di una cornice di contorno dallo spessore di 2 pixel per permettere la convoluzione anche sui pixel nella cornice della foto originaria. La tecnica è quella del *padding* ed i pixel nuovi avranno la stessa intensità del pixel originario ad esso adiacente.
 
@@ -164,7 +166,7 @@ K_x =
 \end{pmatrix}
 $$
 
-Discorso analogo vale per la stima di $\frac{\partial I}{\partial y}$ dove si userà un filtro di Sobel con maschera:
+Discorso analogo vale per la stima di $\hspace{0.1cm} \frac{\partial I}{\partial y} \hspace{0.1cm}$  dove si userà un filtro di Sobel con maschera:
 
 $$
 K_y =
@@ -211,5 +213,132 @@ La funzione [calcola_soglie](./Funzioni_Secondarie/calcola_soglie.m) determina i
 Una sola soglia imporrebbe una scelta piuttosto rigida: una soglia alta eliminerebbe anche i tratti meno evidenti dei contorni, mentre una soglia bassa 
 conserverebbe molte variazioni poco significative. La doppia soglia permette invece di separare i pixel considerati abbastanza marcati da essere conservati 
 direttamente da quelli per i quali sarà necessario valutare anche la connessione con gli altri bordi.
+La funzione dipende da due parametri regolabili `coeff_1` e `coeff_2`, il cui valore viene utilizzato per computare i valori delle soglie. Posto:  
+
+$$
+M := \max_{(i,j)} \left( Norm \textunderscore Grad(i,j) \right);
+$$
+
+allora avremo:
+
+$$
+\begin{align*}
+& T \textunderscore {alta} = coeff \textunderscore 1 * M \\
+& T \textunderscore {bassa} =coeff \textunderscore 2 * T \textunderscore  alta
+\end{align*}
+$$
+
+Valori tipici di `coeff_1` e `coeff_2` sono ad esempio:
+
+$$
+coeff \textunderscore 1 = \frac{20}{100} \hspace{2cm} coeff \textunderscore 2 = \frac{1}{5}
+$$
+
+anche se non c'è una regola precisa e la scelta di quali valori assegnare alle variabili `coeff_1` e `coeff_2` dipende molto
+dalla scena rappresentata nell'immagine.  
+Più `coeff_1` è alto, più l'algoritmo diventa selettivo nel giudicare un pixel come punto di bordo forte, e dunque più `coeff_1` è alto, meno bordi ci saranno.  
+D'altro canto, più `coeff_2` è alto, più l'algoritmo diventa selettivo nel giudicare un pixel come punto di bordo debole, e dunque, più `coeff_2` è alto, 
+meno pixel saranno promossi a bordo per il merito di essere contigui a pixel già di bordo.  
+L'output della funzione sono le due soglie `T_alta` e `T_bassa`.  
+
+## Classificazione dei bordi deboli e forti
+
+La funzione [individua_bordi_deboli_e_forti](./Funzioni_Secondarie/individua_bordi_deboli_e_forti.m) utilizza le due soglie precedentemente calcolate
+per classificare i candidati punti di bordo come *bordi forti*, *bordi deboli*, oppure come punti non di bordo.  
+In particolare la funzione scorre tutta la matrice binaria `I_bordi` e quando trova un pixel candidato bordo applica il seguente costrutto if-else:
+- se `Norm_Grad(i,j)` $\geq$ `T_alta` $\Rightarrow$ $(i,j)$ è un punto di bordo forte
+- se `T_bassa` $\leq$ `Norm_Grad(i,j)` $<$ `T_alta` $\Rightarrow$ $(i,j)$ è un punto di bordo debole
+- se `Norm_Grad(i,j)` $<$ `T_bassa` $\Rightarrow$ $(i,j)$ non è un punto di bordo
+
+La funzione restituisce due output. Uno di questi è un vettore contenente le coordinate dei bordi forti, implementato come matrice $N \times 2$ dove N è 
+il numero di bordi forti e ciascuna delle due colonne della matrice contiene una delle due coordinate del pixel in questione.  
+L'altro output è la matrice `I_bordi` (che viene sovrascritta alla precedente) che ora è una matrice a valori nell'insieme ternario $\\{0, 100, 255 \\}$, dove
+un pixel vale 0 se non è di bordo, 255 se è un pixel di bordo forte, e vale 100 se è un pixel di bordo debole.  
+Il valore 100 è un valore "fittizio" e qualsiasi altro numero compreso tra 1 e 254 andava bene ugualmente, tuttavia, scegliendo un valore 
+abbastanza intermedio tra 0 e 255 è possibile rappresentare dove si trovano i bordi deboli e quelli forti all'interno dell'immagine.
+
+[INSERIRE IMMAGINE BORDI DEBOLI]
+
+
+## Gestione dei bordi deboli mediante isteresi
+
+La funzione [gestisci_bordi_deboli](./Funzioni_Secondarie/gestisci_bordi_deboli.m) ha il compito di decidere quali pixel di bordo debole promuovere a 
+pixel di bordo e quali pixel di bordo debole scartare.  
+L'idea chiave è la seguente: si fa scorrere il vettore dei bordi forti, se un bordo forte è connesso (nel suo intorno $3 \times 3$) ad un bordo debole, 
+allora il bordo debole viene promosso a bordo forte, ed inserito nel vettore dei bordi forti. Quando si è fatto passare tutto il vettore dei bordi forti, i 
+rimanenti bordi deboli non connessi a bordi forti vengono declassati a pixel non di bordo.  
+Di fatto, la tecnica algoritmica utilizzata è quella di una visita in ampiezza (Breadth First Search) con più sorgenti, avviata contemporaneamente da 
+tutti i bordi forti. Qui il vettore dei bordi forti gioca il ruolo di coda (implementata tramite vettore e due indici posizione).  
+Al termine di questa funzione, la matrice `I_bordi` restituita sarà una matrice a valori nell'insieme binario $$ \\{ 0, 255 \\} $$ e sarà la matrice 
+dei bordi definitiva, se un pixel vale 255 è un bordo, in caso contrario non lo è.
+
+[INSERIRE IMMAGINE FINALE]
+
+## Testing su varie immagini
+
+Segue una raccolta di immagini in cui viene confrontata l'immagine originale con il bordo da essa estrapolato. Per altre immagini si confronti la cartella 
+[INSERIRE LINK] e si legga il file [INSERIRE IL LINK]
+
+<br>
+<br>
+<p align="center">
+  <img src="Immagini_Testing/Fig_02.jpg" alt="Figura 02: immagine originale" width="49%">
+  <img src="Immagini_Testing_Bordi/Fig_02_bordi.png" alt="Figura 02: bordi individuati mediante Canny" width="49%">
+</p>
+<br>
+<br>
+
+<p align="center">
+  <img src="Immagini_Testing/Fig_03.jpg" alt="Figura 03: immagine originale" width="49%">
+  <img src="Immagini_Testing_Bordi/Fig_03_bordi.png" alt="Figura 03: bordi individuati mediante Canny" width="49%">
+</p>
+<br>
+<br>
+
+<p align="center">
+  <img src="Immagini_Testing/Fig_04.jpg" alt="Figura 04: immagine originale" width="49%">
+  <img src="Immagini_Testing_Bordi/Fig_04_bordi.png" alt="Figura 04: bordi individuati mediante Canny" width="49%">
+</p>
+<br>
+<br>
+
+<p align="center">
+  <img src="Immagini_Testing/Fig_05.jpg" alt="Figura 05: immagine originale" width="49%">
+  <img src="Immagini_Testing_Bordi/Fig_05_bordi.png" alt="Figura 05: bordi individuati mediante Canny" width="49%">
+</p>
+<br>
+<br>
+
+<p align="center">
+  <img src="Immagini_Testing/Fig_08.jpg" alt="Figura 08: immagine originale" width="49%">
+  <img src="Immagini_Testing_Bordi/Fig_08_bordi.png" alt="Figura 08: bordi individuati mediante Canny" width="49%">
+</p>
+<br>
+<br>
+
+<p align="center">
+  <img src="Immagini_Testing/Fig_10.jpg" alt="Figura 10: immagine originale" width="49%">
+  <img src="Immagini_Testing_Bordi/Fig_10_bordi.png" alt="Figura 10: bordi individuati mediante Canny" width="49%">
+</p>
+<br>
+<br>
+
+<p align="center">
+  <img src="Immagini_Testing/Fig_11.jpg" alt="Figura 11: immagine originale" width="49%">
+  <img src="Immagini_Testing_Bordi/Fig_11_bordi.png" alt="Figura 11: bordi individuati mediante Canny" width="49%">
+</p>
+<br>
+<br>
+
+<p align="center">
+  <img src="Immagini_Testing/Fig_13.jpg" alt="Figura 13: immagine originale" width="49%">
+  <img src="Immagini_Testing_Bordi/Fig_13_bordi.png" alt="Figura 13: bordi individuati mediante Canny" width="49%">
+</p>
+<br>
+<br>
+
+
+## Crediti Fotografici
+
 
 
