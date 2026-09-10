@@ -302,14 +302,14 @@ allora il bordo debole viene promosso a bordo forte, ed inserito nel vettore dei
 rimanenti bordi deboli non connessi a bordi forti vengono declassati a pixel non di bordo.  
 Di fatto, la tecnica algoritmica utilizzata è quella di una visita in ampiezza (Breadth First Search) con più sorgenti, avviata contemporaneamente da 
 tutti i bordi forti. Qui il vettore dei bordi forti gioca il ruolo di coda (implementata tramite vettore e due indici posizione).  
-Al termine di questa funzione, la matrice `I_bordi` restituita sarà una matrice a valori nell'insieme binario $$ \\{ 0, 255 \\} $$ e sarà la matrice 
+Al termine di questa funzione, la matrice `I_bordi` restituita sarà una matrice a valori nell'insieme binario $\\{ 0, 255 \\}$ e sarà la matrice 
 dei bordi definitiva, se un pixel vale 255 è un bordo, in caso contrario non lo è.
 
 
 ## Testing su varie immagini
 
-Segue una raccolta di immagini in cui viene confrontata l'immagine originale con il bordo da essa estrapolato. Per altre immagini si confronti la cartella 
-[Immagini_Testing_Bordi](./Immagini_Testing_Bordi/) e si legga il file [INSERIRE IL LINK]
+Segue una raccolta di immagini in cui viene confrontata l'immagine originale con il bordo da essa estrapolato. Per altre immagini si legga
+il file [Confronto_immagini](./Confronto_immagini.md), oppure si confronti la cartella [Immagini_Testing_Bordi](./Immagini_Testing_Bordi/).  
 
 <br>
 <br>
@@ -361,6 +361,45 @@ Segue una raccolta di immagini in cui viene confrontata l'immagine originale con
 </p>
 <br>
 <br>
+
+
+
+## Esecuzione
+
+Lo script principale utilizza la seguente organizzazione:
+
+| File o cartella | Contenuto |
+| --- | --- |
+| [Canny.m](./Canny.m) | Script principale e scelta dei parametri. |
+| [Funzioni_Secondarie](./Funzioni_Secondarie/) | Le sette funzioni descritte sopra. |
+| [Immagini_Testing](./Immagini_Testing/) | Le immagini da elaborare. |
+
+Per eseguire il programma:
+1. Aprire in MATLAB o GNU Octave la cartella contenente `Canny.m` e impostarla come cartella di lavoro.
+2. Inserire l'immagine desiderata nella cartella `Immagini_Testing`, oppure utilizzare una delle 14 immagini già presenti nella cartella.
+3. In `Canny.m`, modificare il nome del file immagine nella chiamata a `imread`, ad esempio:
+
+   ```matlab
+   I = imread(fullfile('Immagini_Testing', 'nome_immagine.jpg'));
+   ```
+
+4. Impostare i parametri iniziali. I valori attualmente utilizzati sono:
+
+   ```matlab
+   sigma = 1.0;
+   coeff_1 = 20/100;
+   coeff_2 = 1/5;
+   ```
+
+5. Eseguire `Canny.m`.
+
+Affinché i parametri abbiano significato, si scelgano $\sigma > 0$, $\hspace{0.1cm}$ $0 <$ coeff_1 $\leq 1$ $\hspace{0.1cm}$ e $\hspace{0.1cm}$
+$0 <$ coeff_2 $< 1$. Lo script assume che i parametri rispettino queste condizioni.
+
+Il programma visualizza l'immagine originale e la mappa finale dei bordi in due figure distinte. La matrice risultante rimane inoltre disponibile 
+nella variabile `I_bordi`. Lo script attuale non salva automaticamente le figure o le immagini intermedie.
+
+
 
 
 ## Crediti Fotografici
