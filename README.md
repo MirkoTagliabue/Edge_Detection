@@ -91,9 +91,14 @@ Il motivo per cui si usano proprio questi pesi nella combinazione lineare discen
 frequenze di colore
 
 Il risultato della combinazione viene infine convertito a valori `uint8` mediante casting, arrotondando i valori ai livelli interi di grigio rappresentabili, 
-la matrice viene infine restituita alla funzione chiamante.
+la matrice viene infine restituita alla funzione chiamante.  
 
-[INSERIRE CONFRONTO IMMAGINE CONVERTITA IN SCALA DI GRIGI]
+Segue un confronto tra prima e dopo la conversione in scala di grigi:  
+
+<p align="center">
+  <img src="Immagini_Testing/Fig_01.jpg" alt="Immagine originale a colori" width="49%">
+  <img src="Immagini_per_README/Fig_01_scala_di_grigi.png" alt="Immagine convertita in scala di grigi" width="49%">
+</p>
 
 
 ## Riduzione del rumore mediante filtro gaussiano
@@ -119,11 +124,34 @@ La variabile `sigma` è uno dei tre parametri modificabili che determinano la di
 Valori tipici di `sigma` comunque vanno da 0.1 ad 2, anche se comunque dipende fortemente dalla scena rappresentata nell'immagine e da quanti dettagli nei 
 bordi si desidera ottenere.
 
-Come dettaglio implementativo si segnala che la matrice originale viene espansa di una cornice di contorno dallo spessore di 2 pixel per permettere la convoluzione anche sui pixel nella cornice della foto originaria. La tecnica è quella del *padding* ed i pixel nuovi avranno la stessa intensità del pixel originario ad esso adiacente.
+Come dettaglio implementativo si segnala che la matrice originale viene espansa di una cornice di contorno dallo spessore di 2 pixel per permettere la convoluzione anche sui pixel nella cornice della foto originaria. La tecnica è quella del *padding* ed i pixel nuovi avranno la stessa intensità del pixel originario ad esso adiacente.  
+Segue un confronto tra prima e dopo l'applicazione della sfumatura (blur) gaussiana all'immagine in scala di grigi:  
 
-[INSERIRE IMMAGINI CON BLUR GAUSSIANO]
+<p align="center">
+  <img src="Immagini_per_README/Fig_01_scala_di_grigi.png" alt="Immagine in scala di grigi" width="49%">
+  <img src="Immagini_per_README/Fig_01_blur_gaussiano.png" alt="Immagine dopo il filtraggio gaussiano" width="49%">
+</p>
+<br>
 
-[INSERIRE IMMAGINI IN CUI CONFRONTO OUTPUT DUOMO CON DUE \SIGMA DIVERSI]
+
+Segue anche un confronto, su un'immagine diversa rappresentante ora il Duomo di Milano, della differenza dell'immagine finale per due distinti 
+valori di `sigma`. Il Duomo di Milano, con tutti i suoi dettagli architettonici gotici è perfetto per questo confronto, dal momento che più `sigma` è 
+basso più dettagli sono conservati. L'immagine originale è la seguente:  
+
+<p align="center">
+  <img src="Immagini_Testing/Fig_03.jpg" alt="Duomo di Milano: immagine originale" width="49%">
+</p>
+
+Sotto seguono due diverse immagini con i bordi estrapolati. L'immagine di sinistra è prodotta con `sigma = 9`, quella di destra con `sigma=0.15`. 
+
+<p align="center">
+  <img src="Immagini_per_README/Fig_03_sigma_9.png" alt="Bordi del Duomo con sigma = 9" width="49%">
+  <img src="Immagini_per_README/Fig_03_sigma_0_15.png" alt="Bordi del Duomo con sigma = 0.15" width="49%">
+</p>
+
+Si osservi che in generale non è detto che più `sigma` è piccolo, meglio è, dal momento che un valore di `sigma` troppo piccolo coinciderebbe con l'applicare
+una sfumatura gaussiana di bassissima intensità, ed il pericolo è poi quello che l'algoritmo di Canny classifichi come bordo leggere sfumature di colore che
+in realtà bordi non sono.
 
 
 ## Calcolo della norma e della direzione del gradiente
@@ -255,9 +283,14 @@ il numero di bordi forti e ciascuna delle due colonne della matrice contiene una
 L'altro output è la matrice `I_bordi` (che viene sovrascritta alla precedente) che ora è una matrice a valori nell'insieme ternario $\\{0, 100, 255 \\}$, dove
 un pixel vale 0 se non è di bordo, 255 se è un pixel di bordo forte, e vale 100 se è un pixel di bordo debole.  
 Il valore 100 è un valore "fittizio" e qualsiasi altro numero compreso tra 1 e 254 andava bene ugualmente, tuttavia, scegliendo un valore 
-abbastanza intermedio tra 0 e 255 è possibile rappresentare dove si trovano i bordi deboli e quelli forti all'interno dell'immagine.
+abbastanza intermedio tra 0 e 255 è possibile rappresentare dove si trovano i bordi deboli e quelli forti all'interno dell'immagine.  
+Seguono due immagini, sulla sinistra l'immagine con in evidenza i bordi forti (in bianco acceso) e quelli deboli (in grigio chiaro), sulla destra l'immagine 
+definitiva ottenuta dopo aver deciso quali bordi deboli promuovere a bordo forte e quali invece scartare.  
 
-[INSERIRE IMMAGINE BORDI DEBOLI]
+<p align="center">
+  <img src="Immagini_per_README/Fig_01_bordi_deboli.png" alt="Bordi deboli in grigio e bordi forti in bianco, prima dell’isteresi" width="49%">
+  <img src="Immagini_Testing_Bordi/Fig_01_bordi.png" alt="Bordi finali dopo l’isteresi" width="49%">
+</p>
 
 
 ## Gestione dei bordi deboli mediante isteresi
@@ -272,25 +305,17 @@ tutti i bordi forti. Qui il vettore dei bordi forti gioca il ruolo di coda (impl
 Al termine di questa funzione, la matrice `I_bordi` restituita sarà una matrice a valori nell'insieme binario $$ \\{ 0, 255 \\} $$ e sarà la matrice 
 dei bordi definitiva, se un pixel vale 255 è un bordo, in caso contrario non lo è.
 
-[INSERIRE IMMAGINE FINALE]
 
 ## Testing su varie immagini
 
 Segue una raccolta di immagini in cui viene confrontata l'immagine originale con il bordo da essa estrapolato. Per altre immagini si confronti la cartella 
-[INSERIRE LINK] e si legga il file [INSERIRE IL LINK]
+[Immagini_Testing_Bordi](./Immagini_Testing_Bordi/) e si legga il file [INSERIRE IL LINK]
 
 <br>
 <br>
 <p align="center">
   <img src="Immagini_Testing/Fig_02.jpg" alt="Figura 02: immagine originale" width="49%">
   <img src="Immagini_Testing_Bordi/Fig_02_bordi.png" alt="Figura 02: bordi individuati mediante Canny" width="49%">
-</p>
-<br>
-<br>
-
-<p align="center">
-  <img src="Immagini_Testing/Fig_03.jpg" alt="Figura 03: immagine originale" width="49%">
-  <img src="Immagini_Testing_Bordi/Fig_03_bordi.png" alt="Figura 03: bordi individuati mediante Canny" width="49%">
 </p>
 <br>
 <br>
@@ -340,5 +365,31 @@ Segue una raccolta di immagini in cui viene confrontata l'immagine originale con
 
 ## Crediti Fotografici
 
+Nella cartella [Immagini_Testing](./Immagini_Testing/) sono presenti alcune immagini utilizzate per testare l'algoritmo di Canny e nella cartella 
+[Immagini_Testing_Bordi](./Immagini_Testing_Bordi/) sono presenti le rispettive immagini con i bordi estrapolati.  
+Le fotografie utilizzate per il testing provengono da [Unsplash](https://unsplash.com) e sono messe a disposizione gratuitamente secondo i termini della [licenza Unsplash](https://unsplash.com/license).
 
+Ringrazio gli autori per aver condiviso le proprie fotografie, che hanno permesso di sperimentare l’algoritmo su soggetti e contesti differenti. Nella tabella seguente sono riportati gli autori e i collegamenti alle fotografie originali.
+
+<details>
+<summary>Mostra gli autori e le fotografie originali</summary>
+
+| Immagine | Autore | Fotografia originale |
+| --- | --- | --- |
+| `Fig_01.jpg` | Pedro Lastra | [Unsplash](https://unsplash.com/photos/Nyvq2juw4_o) |
+| `Fig_02.jpg` | Boris Smokrovic | [Unsplash](https://unsplash.com/photos/DPXytK8Z59Y) |
+| `Fig_03.jpg` | Lea V | [Unsplash](https://unsplash.com/photos/z2IED5kTd-8) |
+| `Fig_04.jpg` | Nick Fewings | [Unsplash](https://unsplash.com/photos/aHr40GPT3MI) |
+| `Fig_05.jpg` | Marcin Nowak | [Unsplash](https://unsplash.com/photos/iXqTqC-f6jI) |
+| `Fig_06.jpg` | Christina Terzidou | [Unsplash](https://unsplash.com/photos/wBxl3rSwutM) |
+| `Fig_07.jpg` | dlxmedia.hu | [Unsplash](https://unsplash.com/photos/52AgXRhDaPI) |
+| `Fig_08.jpg` | Matteo del Piano | [Unsplash](https://unsplash.com/photos/7Y015gklIDg) |
+| `Fig_09.jpg` | Uriel Soberanes | [Unsplash](https://unsplash.com/photos/xadzcCQZ_Xc) |
+| `Fig_10.jpg` | Wexor Tmg | [Unsplash](https://unsplash.com/photos/L-2p8fapOA8) |
+| `Fig_11.jpg` | Stefan C. Asafti | [Unsplash](https://unsplash.com/photos/nW02kL8o-tY) |
+| `Fig_12.jpg` | Timo Volz | [Unsplash](https://unsplash.com/photos/ZlFKIG6dApg) |
+| `Fig_13.jpg` | Nick Karvounis | [Unsplash](https://unsplash.com/photos/Ciqxn7FE4vE) |
+| `Fig_14.jpg` | Eiliv Aceron | [Unsplash](https://unsplash.com/photos/ZuIDLSz3XLg) |
+
+</details>
 
